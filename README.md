@@ -64,6 +64,7 @@ Measured on 6 November 2026, using 191,161 held-out pairs for the tricky questio
 | T-Rex, deaths over 5 courses, shield off | not published | 26 | **50** |
 
 **The known gap:** the Q&A and DeepSWE results replicate, but our model reads the T-Rex labels far worse than the authors' head. The likely cause is post-training, whose full recipe and exact data are not public.
+We also tried actions cut down to the bare decision, without the agent's narration (`pipeline/embed_actions.py`). In short 30-second game tests, planner agreement stayed at 16% to 29% with the shield on, against about 80% for the authors' head, so that did not close the gap.
 
 We could not rerun WikiRacing, Super Mario, BFCL or Terminal-Bench, because their harnesses or candidate sets are not public. The Jev numbers we cite come from the authors' logs and charts. We did not run Jev ourselves.
 
