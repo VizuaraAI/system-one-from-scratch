@@ -81,7 +81,7 @@ We could not rerun WikiRacing, Super Mario, BFCL or Terminal-Bench, because thei
 
 ```text
 pipeline/   data copy, trainer, agent data, embedding, testing, game rendering
-site/       the workshop site: playable games and charts
+site/       the workshop deck: run python3 site/build.py; arrow keys to move, F for full screen, N for notes
 results/    measured numbers
 ```
 
