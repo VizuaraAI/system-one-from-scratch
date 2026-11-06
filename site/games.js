@@ -58,7 +58,7 @@
     var W = 1000, H = 470, L = 70, B = 40, Tp = 14, y = function (v) { return Tp + (H - Tp - B) * (1 - v / 0.8); }, seq = [], base = 0, pos = 0, total = 0;
     ST.forEach(function (g, gi) { var pts = g[3], last = pts[pts.length - 1].s, off = pos; pts.forEach(function (d) { seq.push({ stage: gi, step: base + d.s, x: L + (W - L - 20) * (off + g[2] * d.s / last), h: d.h, l: d.l }); }); pos += g[2]; base += last; }); total = base;
     var grid = ''; [0, .2, .4, .6, .8].forEach(function (v) { grid += '<line x1="' + L + '" x2="' + (W - 20) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="#ececec"/><text x="' + (L - 10) + '" y="' + (y(v) + 7) + '" text-anchor="end" font-size="20" fill="#8c8c8c">' + v * 100 + '%</text>'; });
-    var off2 = 0; ST.forEach(function (g) { var x = L + (W - L - 20) * off2; grid += '<line x1="' + x + '" x2="' + x + '" y1="' + Tp + '" y2="' + (H - B) + '" stroke="#dcdcdc" stroke-dasharray="5 6"/><text x="' + (x + 8) + '" y="' + (H - 12) + '" font-size="20" fill="#8c8c8c">' + g[1] + '</text>'; off2 += g[2]; });
+    var off2 = 0; ST.forEach(function (g) { var x = L + (W - L - 20) * off2; grid += '<line x1="' + x + '" x2="' + x + '" y1="' + Tp + '" y2="' + (H - B) + '" stroke="#dcdcdc" stroke-dasharray="5 6"/>'; off2 += g[2]; });
     chart.innerHTML = grid + '<polyline id="tr-line" fill="none" stroke="#4d6bfe" stroke-width="5" points=""/><circle id="tr-dot" r="9" fill="#4d6bfe" cx="' + L + '" cy="' + y(.08) + '"/>';
     function mat(name) {
       if (!M) return; var st = M.stages[name], n = M.labels.length, h = '<div style="display:grid;grid-template-columns:repeat(' + n + ',1fr);gap:3px">';
