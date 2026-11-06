@@ -1,0 +1,8 @@
+promo/
+results/*.log
+results/*.mp4
+results/*.gif
+results/*.png
+.env*
+.vercel
+__pycache__/

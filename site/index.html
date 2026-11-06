@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Build a System One Model from Scratch</title>
+<meta name="description" content="A live workshop by Dr. Raj Dandekar: rebuilding CLM-8B, an open System One model, stage by stage, with real games and measured results.">
+<meta name="author" content="Raj Dandekar">
+<meta name="robots" content="noindex">
+<meta property="og:title" content="Build a System One Model (like Jev) from Scratch">
+<meta property="og:description" content="Rebuilding CLM-8B stage by stage, with real games and measured results.">
+<link rel="icon" href="https://superagent.vizuara.ai/vizuara-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Build a System One Model from Scratch","author":{"@type":"Person","name":"Raj Dandekar"},"publisher":{"@type":"Organization","name":"Vizuara AI Labs","url":"https://vizuara.ai","logo":"https://superagent.vizuara.ai/vizuara-logo.png"},"datePublished":"2026-11-06"}</script>
+<style>
+:root{--ink:#16213a;--muted:#56606e;--paper:#faf8f3;--paper2:#f0ede4;--line:#dcd7ca;--orange:#b84a14;--blue:#2a62a8;--blue2:#e6eef8;--orange2:#fbede4;--night:#16213a;--mono:'JetBrains Mono','Courier New',monospace}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.55 'IBM Plex Sans',Arial,sans-serif}
+a{color:var(--blue)}
+nav{position:sticky;top:0;z-index:5;background:rgba(250,248,243,.95);border-bottom:1px solid var(--line);display:flex;gap:18px;align-items:center;padding:10px 24px;font-size:15px;flex-wrap:wrap}
+nav img{width:22px;height:22px;display:block}nav a{text-decoration:none;color:var(--ink)}nav .sp{flex:1}
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+section{padding:64px 0;border-bottom:1px solid var(--line)}
+h1{font-size:clamp(40px,6.4vw,76px);line-height:1.04;margin:0 0 18px;font-weight:700;letter-spacing:-.5px}
+h2{font-size:clamp(30px,4vw,46px);line-height:1.1;margin:0 0 14px;font-weight:600}
+h3{font-size:22px;margin:0 0 8px;font-weight:600}
+.eyebrow{font:600 14px var(--mono);letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);margin:0 0 12px}
+.lead{font-size:clamp(19px,2.2vw,25px);line-height:1.4;max-width:860px;color:var(--ink)}
+.note{color:var(--muted);font-size:15px}
+.hero{background:var(--night);color:#f4f1e8;border:0;padding:76px 0}
+.hero .lead{color:#d5d9e2}.hero .eyebrow{color:#f0a36b}.hero .note{color:#c9cfda}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;margin-top:34px}
+.stat b{display:block;font:600 40px var(--mono);color:#f0a36b}.stat span{font-size:16px;color:#d5d9e2}
+.who{margin-top:30px;font-size:17px}.btn{display:inline-block;background:var(--orange);color:#fff;text-decoration:none;border:0;border-radius:999px;padding:11px 22px;font:600 16px 'IBM Plex Sans',Arial,sans-serif;cursor:pointer}
+.btn.alt{background:transparent;border:1.5px solid currentColor;color:inherit}.btn:disabled{opacity:.45;cursor:default}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0}
+.tab{background:var(--paper2);border:1px solid var(--line);border-radius:999px;padding:10px 18px;font:600 16px 'IBM Plex Sans',Arial,sans-serif;cursor:pointer;color:var(--ink)}
+.tab[aria-selected=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:26px;min-height:440px}
+.opt{display:block;width:100%;text-align:left;background:var(--paper);border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;margin:8px 0;font:500 18px 'IBM Plex Sans',Arial,sans-serif;cursor:pointer;position:relative;overflow:hidden;color:var(--ink)}
+.opt .fill{position:absolute;left:0;top:0;bottom:0;background:var(--blue2);z-index:0}.opt span{position:relative;z-index:1}.opt .pct{float:right;font-family:var(--mono)}
+.opt.gold{border-color:var(--blue)}.opt.you{outline:2px dashed var(--orange);outline-offset:2px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:26px}
+.score{font:600 20px var(--mono)}
+.grid5{display:grid;grid-template-columns:repeat(5,64px);grid-template-rows:repeat(5,64px);gap:3px;background:var(--line);padding:3px;border-radius:10px;width:max-content}
+.cell{background:#fff;display:flex;align-items:center;justify-content:center;font:600 15px var(--mono);border-radius:5px;color:var(--muted)}
+.cell.me{background:var(--orange);color:#fff}.cell.seen{background:var(--orange2)}
+video{width:100%;display:block;border-radius:12px;background:var(--paper2);border:1px solid var(--line)}
+.vids{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:24px}
+.bar{display:grid;grid-template-columns:230px 1fr 90px;gap:12px;align-items:center;margin:9px 0;font-size:16px}
+.track{height:22px;background:transparent;border-bottom:1px solid var(--line)}.track i{display:block;height:22px;border-radius:0 4px 4px 0}
+.val{font:600 16px var(--mono)}
+.chart{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px}
+.legend{display:flex;gap:18px;font-size:14px;color:var(--muted);margin:6px 0 8px;flex-wrap:wrap}.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+table{border-collapse:collapse;width:100%;font-size:17px}th,td{text-align:left;padding:10px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-weight:600}
+td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:20px}.flow div{background:var(--paper2);padding:16px;border-radius:12px}.flow b{display:block;margin-bottom:4px}
+.tower{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0;font-size:16px}.tower span{padding:12px 14px;border-radius:10px;background:var(--paper2)}.tower .q{background:var(--night);color:#fff}.tower .s{background:var(--blue2);border:1.5px solid var(--blue)}.tower .a{background:var(--orange2);border:1.5px solid var(--orange)}
+.mat{font-family:var(--mono);font-size:17px}.mat td,.mat th{text-align:center}.mat td.d{color:var(--blue);font-weight:600}
+input[type=range]{width:100%}
+pre{background:var(--night);color:#eef0f4;padding:18px;border-radius:12px;overflow:auto;font:15px/1.5 var(--mono)}
+footer{padding:44px 0 60px;font-size:16px}footer img{width:26px;height:26px;vertical-align:middle;margin-right:8px}
+@media (max-width:640px){.bar{grid-template-columns:120px 1fr 66px}.grid5{grid-template-columns:repeat(5,52px);grid-template-rows:repeat(5,52px)}section{padding:44px 0}}
+</style>
+</head>
+<body>
+<nav><a href="https://vizuara.ai"><img src="https://superagent.vizuara.ai/vizuara-logo.png" alt="Vizuara"></a><a href="#play"><b>See it work</b></a><a href="#videos">Videos</a><a href="#built">What we built</a><a href="#results">Results</a><a href="#how">How it works</a><span class="sp"></span><a href="https://github.com/VizuaraAI/system-one-from-scratch">GitHub repo</a></nav>
+
+<section class="hero"><div class="wrap">
+<p class="eyebrow">Live workshop · 6 November 2026 · 8 to 10 PM IST</p>
+<h1>Build a System One Model <i style="font-weight:400">(like Jev)</i> from Scratch</h1>
+<p class="lead">Jev is closed source. Today we rebuild an open equivalent, CLM-8B, stage by stage. By the end you will know how to train a model that makes a decision in milliseconds, without writing a single token.</p>
+<div class="stats">
+<div class="stat"><b>62.45M</b><span>question and answer pairs trained on</span></div>
+<div class="stat"><b>18.9M</b><span>parameters trained, on a frozen 8B encoder</span></div>
+<div class="stat"><b>42 ms</b><span>per decision across 1,000 possible actions</span></div>
+<div class="stat"><b>31 / 38</b><span>DeepSWE tasks, the same as the published result</span></div>
+</div>
+<p class="who"><b>Dr. Raj Dandekar</b>, MIT PhD, Co-founder, <a href="https://vizuara.ai" style="color:#f0a36b">Vizuara</a></p>
+<p><a class="btn" href="#play">See what you will build</a> &nbsp; <a class="btn alt" href="https://github.com/VizuaraAI/system-one-from-scratch">Get the code</a></p>
+</div></section>
+
+<section id="play"><div class="wrap">
+<p class="eyebrow">Start here</p>
+<h2>This is what you are about to build</h2>
+<p class="lead">It sees a situation and a list of options, and scores each one in milliseconds. These games were never in its training data. Every answer here is a real output, and you can switch between the released CLM-8B and the rebuild we trained today.</p>
+<div class="tabs" role="tablist" id="tabs"></div><div class="tabs" id="models" style="margin-top:-8px"></div>
+<div class="panel" id="panel"></div>
+<p class="note" id="scorenote"></p>
+</div></section>
+
+<section id="videos"><div class="wrap">
+<p class="eyebrow">Recorded runs</p>
+<h2>The dinosaur game</h2>
+<p class="lead">The game runs at 60 frames per second, and the model answers in about 17 ms. A physics planner labels each move safe or unsafe, and a safety shield overrides unsafe answers.</p>
+<div class="vids">
+<div><video src="media/ours_vs_authors_shield.mp4" controls muted loop playsinline preload="metadata"></video><h3 style="margin-top:12px">Our model next to the authors’ model</h3><p class="note">Same course, shield on. Both survive this 60-second course.</p></div>
+<div><video src="media/ours_shield_on_off.mp4" controls muted loop playsinline preload="metadata"></video><h3 style="margin-top:12px">Our model, shield on and off</h3><p class="note">The same head and course. This shows how much work the shield does.</p></div>
+<div><video src="media/authors_seed0.mp4" controls muted loop playsinline preload="metadata"></video><h3 style="margin-top:12px">The authors’ head, shield on and off</h3><p class="note">The released CLM-8B head has the same dependence on the shield.</p></div>
+</div>
+<p class="note">Frames are real, replayed from the benchmark harness with our own simple graphics. Over 5 courses with the shield on, our model survived 3 and the authors’ head survived 4.</p>
+</div></section>
+
+<section id="built"><div class="wrap">
+<p class="eyebrow">Built today</p>
+<h2>What we built</h2>
+<p class="lead">The serving code is public, but the training scripts are not. We recovered the recipe from the authors’ checkpoints, wrote our own trainer, and ran every stage ourselves.</p>
+<div class="flow">
+<div><b>1. Vectors</b>625 chunks of frozen Qwen3-8B vectors, re-checked at cosine 0.9999+</div>
+<div><b>2. Pre-training</b>62M pairs, 30,000 steps, about 1.7 hours on one GPU</div>
+<div><b>3. Mid-training</b>Up to 10 tricky wrong answers per question, on 2.8M pairs</div>
+<div><b>4. Post-training</b>847k agent decisions from 35 datasets, embedded in about an hour</div>
+<div><b>5. Serving</b>The authors’ engine and cache running our weights</div>
+<div><b>6. Fine-tuning</b>DeepSWE verifier in about 12 seconds</div>
+</div>
+</div></section>
+
+<section id="results"><div class="wrap">
+<p class="eyebrow">Measured</p>
+<h2>Results</h2>
+<div class="two">
+<div class="chart"><h3>Faster than Jev: time per answer, dinosaur game</h3><p class="note">Lower is better. Median milliseconds. Jev’s number is from the authors’ logged run.</p>
+<div class="bar" title="Our model: 17.1 ms"><span>Our model</span><div class="track"><i style="width:11.4%;background:var(--orange)"></i></div><span class="val">17.1</span></div>
+<div class="bar" title="Jev: 149.8 ms"><span>Jev</span><div class="track"><i style="width:100%;background:var(--blue)"></i></div><span class="val">149.8</span></div>
+<p class="lead" style="font-size:20px;margin:14px 0 0">About <b>8.8× faster</b>.</p></div>
+<div class="chart"><h3>Ahead of Jev: picking the best solution, DeepSWE</h3><p class="note">Higher is better. 38 held-out tasks, best of 4. Jev’s number is from the authors’ chart.</p>
+<div class="bar" title="A perfect picker"><span>Perfect picker</span><div class="track"><i style="width:89.5%;background:#a7adb7"></i></div><span class="val">89.5%</span></div>
+<div class="bar" title="Our model, 31 of 38"><span>Our model</span><div class="track"><i style="width:81.6%;background:var(--orange)"></i></div><span class="val">81.6%</span></div>
+<div class="bar" title="Random picking"><span>Random pick</span><div class="track"><i style="width:73.7%;background:#a7adb7"></i></div><span class="val">73.7%</span></div>
+<div class="bar" title="Jev, from the authors' chart"><span>Jev</span><div class="track"><i style="width:71.1%;background:var(--blue)"></i></div><span class="val">71.1%</span></div>
+<p class="note" style="margin-top:12px">Ours is seed 1234. Over 5 seeds we solved 29 to 32 tasks, mean 30.6. The authors’ head averaged 31.0.</p></div>
+</div>
+<div class="chart" style="margin-top:26px"><h3>Did we replicate it? Tricky question test</h3><p class="note">Pick the right answer out of up to 11 close options, on 191,161 held-out pairs. Random guessing scores about 9%.</p>
+<div class="legend"><span><i style="background:var(--blue)"></i>Published in the blog</span><span><i style="background:var(--orange)"></i>Our model</span></div>
+<div id="rep"></div></div>
+<h3 style="margin-top:34px">Published CLM-8B against Jev, every benchmark</h3>
+<table><tr><th>Benchmark</th><th class="n">CLM success</th><th class="n">Jev success</th><th class="n">CLM ms</th><th class="n">Jev ms</th></tr>
+<tr><td>T-Rex game</td><td class="n">5/5</td><td class="n">5/5</td><td class="n">16.5</td><td class="n">149.8</td></tr>
+<tr><td>Tool calling, BFCL v4</td><td class="n">95.2%</td><td class="n">99.2%</td><td class="n">76.8</td><td class="n">125.5</td></tr>
+<tr><td>WikiRacing</td><td class="n">26/30</td><td class="n">30/30</td><td class="n">79.8</td><td class="n">225</td></tr>
+<tr><td>Super Mario</td><td class="n">5/5</td><td class="n">5/5</td><td class="n">33.5</td><td class="n">132.6</td></tr>
+<tr><td>DeepSWE, fine-tuned</td><td class="n">81.6%</td><td class="n">71.1%</td><td class="n">79</td><td class="n">449</td></tr>
+<tr><td>Terminal-Bench 2.1, fine-tuned</td><td class="n">87.6%</td><td class="n">83.1%</td><td class="n">32</td><td class="n">131</td></tr></table>
+<p class="note">The authors’ numbers. CLM is faster everywhere and leads the verifier tests. Jev leads on tool calling, WikiRacing and how well it reads the game’s labels (98.7% agreement with the planner, against about 66%). Our rebuild reached 10% on that measure, which is the main gap we still have to close. The other harnesses are not public, so we could not rerun them.</p>
+</div></section>
+
+<section id="how"><div class="wrap">
+<p class="eyebrow">The idea</p>
+<h2>How it works</h2>
+<p class="lead">Turn every state and every action into a vector. Train so a state lands close to the action that was taken. At runtime, the closest action is the decision.</p>
+<h3 style="margin-top:30px">Architecture: one frozen encoder, two small heads</h3>
+<div class="tower"><span>Question + document</span>→<span class="q">Qwen3-8B, frozen</span>→<span class="s">State head, 9.44M</span>→<span>512-d</span></div>
+<div class="tower"><span>Answer</span>→<span class="q">the same Qwen3-8B</span>→<span class="a">Action head, 9.44M</span>→<span>512-d</span></div>
+<h3 style="margin-top:30px">One row of data</h3>
+<p><b>State:</b> [an article on how consistently people identify craters on the Moon] Which lunar region has more consistent crater counts according to the study?<br><b>Action:</b> The mare regions</p>
+<h3 style="margin-top:30px">InfoNCE on a 2 × 2 table</h3>
+<div class="two"><div><table class="mat"><tr><th></th><th>Moon’s gravity</th><th>Shakespeare</th></tr><tr><th>Tides?</th><td class="d">0.30</td><td>0.25</td></tr><tr><th>Romeo?</th><td>0.10</td><td class="d">0.30</td></tr></table>
+<p><label>Scale: <b id="sv">10</b><input id="scale" type="range" min="1" max="100" value="10"></label></p></div>
+<div><p class="lead" style="font-size:20px">Each row is a classification problem whose correct answer is on the diagonal.</p><p class="val" id="infonce"></p><p class="note">Scores are made up for teaching. The authors’ final scale is capped at 100.</p></div></div>
+<h3 style="margin-top:30px">Three stages of data</h3>
+<table><tr><th>Stage</th><th>Data</th><th>What it teaches</th></tr><tr><td>Pre-training</td><td>62M question and answer pairs</td><td>Broad meaning</td></tr><tr><td>Mid-training</td><td>Up to 10 tricky wrong answers per question</td><td>Fine distinctions</td></tr><tr><td>Post-training</td><td>Agent recordings, plus 40% replay</td><td>What to do next</td></tr></table>
+<h3 style="margin-top:30px">Runtime: what is cached</h3>
+<table><tr><th>Actions</th><th>Action vectors</th><th class="n">Time per decision</th></tr><tr><td>4</td><td>Cached</td><td class="n">42.0 ms</td></tr><tr><td>1,000</td><td>Cached</td><td class="n">42.1 ms</td></tr><tr><td>1,000</td><td>Not cached</td><td class="n">about 6,900 ms</td></tr></table>
+</div></section>
+
+<footer><div class="wrap">
+<p><a href="https://vizuara.ai"><img src="https://superagent.vizuara.ai/vizuara-logo.png" alt="Vizuara"></a><b>Who wrote this:</b> Dr. Raj Dandekar and the team at <a href="https://vizuara.ai">Vizuara AI Labs</a>. Code: <a href="https://github.com/VizuaraAI/system-one-from-scratch">github.com/VizuaraAI/system-one-from-scratch</a>.</p>
+<p class="note">Based on “Contrastive Language Models”, Kwok et al., Stanford and NVIDIA Research, 2026 (<a href="https://contrastive-lm.notion.site">blog</a>, <a href="https://github.com/Contrastive-LM/CLM">code</a>). Vizuara is not affiliated with the authors or with TypeSafe.</p>
+<p class="note">If you enjoy building this way, we teach with love, care and passion in <a href="https://enterprise-agents.vizuara.ai/">Agentic Systems Engineering</a>.</p>
+</div></footer>
+
+<script>
+let H="authors",CUR="dino",S=null,R=null;const NAMES={authors:"Released CLM-8B (what we are rebuilding)",ours_neg3e4:"Our rebuild, trained today"};
+const $=s=>document.querySelector(s),pct=x=>(100*x).toFixed(1)+"%",esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+const GAMES=[["dino","Dinosaur"],["trivia","Quiz: you vs the model"],["cross","Safe crossing"],["grid","Key and door"]];
+function tabs(){$("#tabs").innerHTML=GAMES.map(([k,n],i)=>`<button class="tab" role="tab" aria-selected="${!i}" data-k="${k}">${n}</button>`).join("");
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x===b));show(b.dataset.k)})}
+function models(){const m=$("#models");if(CUR==="dino"){m.innerHTML="";return}m.innerHTML=Object.entries(NAMES).map(([k,n])=>`<button class="tab" aria-selected="${k===H}" data-m="${k}" style="font-size:15px;padding:7px 14px">${n}</button>`).join("");m.querySelectorAll("button").forEach(b=>b.onclick=()=>{H=b.dataset.m;R=S.heads[H];if(CUR==="grid"){clearInterval(gi);gx=0;gy=4;gk=0;gt=0;gs=[]}show(CUR)})}
+function show(k){CUR=k;models();({dino,trivia,cross,grid})[k]()}
+function dino(){$("#panel").innerHTML=`<h3>Dinosaur</h3><video src="media/ours_vs_authors_shield.mp4" controls autoplay muted loop playsinline></video><p class="note">A real recorded run. The top lane is the model we trained today, and the bottom lane is the released CLM-8B. Our rebuild makes about 3,270 decisions per 60-second run.</p>`;$("#scorenote").textContent=""}
+let tq=0,tu=0,tm=0;
+function trivia(){const q=S.trivia[tq],p=R.trivia[tq];$("#panel").innerHTML=`<h3>Question ${tq+1} of ${S.trivia.length}</h3><p class="lead" style="font-size:24px">${esc(q[0])}</p><div id="opts">${q[1].map((o,i)=>`<button class="opt" data-i="${i}"><span>${esc(o)}</span></button>`).join("")}</div><p class="score" id="ts">You ${tu} · Model ${tm}</p><div id="tn"></div>`;
+document.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{const c=+b.dataset.i,g=q[2],mi=p.indexOf(Math.max(...p));tu+=c===g;tm+=mi===g;
+document.querySelectorAll(".opt").forEach((x,i)=>{x.disabled=true;x.innerHTML=`<div class="fill" style="width:${100*p[i]}%"></div><span>${esc(q[1][i])}</span><span class="pct">${pct(p[i])}</span>`;if(i===g)x.classList.add("gold");if(i===c)x.classList.add("you")});
+$("#ts").textContent=`You ${tu} · Model ${tm}`;$("#tn").innerHTML=tq<S.trivia.length-1?`<button class="btn" id="nx">Next question</button>`:`<button class="btn" id="nx">Play again</button>`;$("#nx").onclick=()=>{if(tq<S.trivia.length-1)tq++;else{tq=0;tu=0;tm=0}trivia()}})});
+$("#scorenote").textContent=`Bars show the model’s real probabilities. Measured: it answers ${Math.round(R.trivia_acc*S.trivia.length)} of ${S.trivia.length} correctly.`}
+let cl=0,cc=0;function cross(){const r=R.crossing[cl*2+cc],win=r.p.walk>r.p.wait?"walk":"wait";$("#panel").innerHTML=`<h3>A pedestrian at a crossing</h3><div class="tabs"><button class="tab" id="cl">Light: ${r.light}</button><button class="tab" id="cc">${esc(r.car)}</button></div><p class="lead">The model says: <b>${win==="walk"?"Walk across the road now.":"Wait at the curb."}</b></p><div class="opt" style="cursor:default"><div class="fill" style="width:${100*r.p.walk}%"></div><span>Walk across the road now.</span><span class="pct">${pct(r.p.walk)}</span></div><div class="opt" style="cursor:default"><div class="fill" style="width:${100*r.p.wait}%"></div><span>Wait at the curb.</span><span class="pct">${pct(r.p.wait)}</span></div>`;$("#cl").onclick=()=>{cl=1-cl;cross()};$("#cc").onclick=()=>{cc=1-cc;cross()};$("#scorenote").textContent=`Change the light and the road. Measured: ${Math.round(R.crossing_acc*4)} of 4 situations answered safely.`}
+let gx=0,gy=4,gk=0,gt=0,gs=[],gi=null;const STEP={north:[0,-1],south:[0,1],east:[1,0],west:[-1,0]};
+function gridDraw(msg){let h='';for(let y=0;y<5;y++)for(let x=0;x<5;x++){const me=x===gx&&y===gy,seen=gs.includes(x+","+y);let t='';if(x===3&&y===1&&!gk)t='KEY';if(x===4&&y===4)t='DOOR';h+=`<div class="cell ${me?'me':seen?'seen':''}">${me?'●':t}</div>`}
+const st=R.grid[`${gx},${gy},${gk}`];$("#panel").innerHTML=`<h3>Key and door: the model plays</h3><div class="two"><div class="grid5">${h}</div><div><p class="lead" style="font-size:20px">${msg}</p>${st?Object.entries(st).sort((a,b)=>b[1]-a[1]).map(([d,v])=>`<div class="opt" style="cursor:default;padding:7px 12px"><div class="fill" style="width:${100*v}%"></div><span>Go ${d}</span><span class="pct">${pct(v)}</span></div>`).join(""):""}<p><button class="btn" id="gs">Play</button> <button class="btn alt" id="gr">Reset</button></p></div></div>`;$("#gs").onclick=()=>{clearInterval(gi);gi=setInterval(gridStep,450)};$("#gr").onclick=()=>{clearInterval(gi);gx=0;gy=4;gk=0;gt=0;gs=[];gridDraw("Get the key, then reach the door.")};
+$("#scorenote").textContent=`Each step uses the model’s real scores for that exact situation. Measured: reaches the door from ${R.grid_solved} of ${R.grid_starts} starting squares.`}
+function gridStep(){const st=R.grid[`${gx},${gy},${gk}`];if(!st){clearInterval(gi);return}const d=Object.entries(st).sort((a,b)=>b[1]-a[1])[0][0];gs.push(gx+","+gy);gx=Math.min(4,Math.max(0,gx+STEP[d][0]));gy=Math.min(4,Math.max(0,gy+STEP[d][1]));gt++;let msg=`Step ${gt}: go ${d}.`;if(!gk&&gx===3&&gy===1){gk=1;msg="Got the key."}if(gk&&gx===4&&gy===4){clearInterval(gi);gridDraw(`Reached the door in ${gt} steps.`);return}if(gt>=25){clearInterval(gi);gridDraw("The model got stuck going back and forth here. It only sees the current square.");return}gridDraw(msg)}
+function grid(){clearInterval(gi);gridDraw("Get the key, then reach the door.")}
+function rep(){const rows=[["After pre-training",52.1,51.4],["After mid-training",69.2,68.5],["After post-training",68.5,69.0]];$("#rep").innerHTML=rows.map(([n,a,b])=>`<div class="bar" title="${n}: blog ${a}%"><span>${n}</span><div class="track"><i style="width:${a}%;background:var(--blue)"></i></div><span class="val">${a}%</span></div><div class="bar" title="${n}: ours ${b}%"><span></span><div class="track"><i style="width:${b}%;background:var(--orange)"></i></div><span class="val">${b}%</span></div>`).join("")}
+function inf(){const s=+$("#scale").value;$("#sv").textContent=s;const M=[[.3,.25],[.1,.3]],p=(r,i)=>{const e=r.map(v=>Math.exp(s*v));return e[i]/e.reduce((x,y)=>x+y)};const v=[p(M[0],0),p(M[1],1),p([M[0][0],M[1][0]],0),p([M[0][1],M[1][1]],1)],L=v.map(x=>-Math.log(x)).reduce((a,b)=>a+b)/4;$("#infonce").innerHTML=`First row probability: ${pct(v[0])}<br>Loss: ${L.toFixed(3)}`}
+$("#scale").oninput=inf;inf();rep();tabs();
+fetch("scores.json").then(r=>r.json()).then(d=>{S=d;R=d.heads[H];show("dino")}).catch(()=>{$("#panel").textContent="Could not load game data."});
+</script>
+</body></html>

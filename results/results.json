@@ -1,0 +1,4 @@
+{"date": "2026-11-06", "tricky_qa_top1": {"n": 191161, "published": {"pre": 0.521, "mid": 0.692, "post": 0.685}, "authors_weights": {"pre": 0.5173, "mid": 0.6916, "post": 0.6863}, "ours": {"pre": 0.5143, "mid": 0.6847, "post": 0.6899}},
+ "deepswe_38": {"random": 28, "oracle": 34, "authors_by_seed": {"1234": 31, "1": 32, "2": 30, "3": 31, "4": 31}, "ours_by_seed": {"1234": 31, "1": 29, "2": 30, "3": 32, "4": 31}, "readme_default_data": 28},
+ "trex_5_courses": {"authors_log": {"survived": 5, "latency_ms": 16.5, "planner_agreement": 0.658}, "authors_head_our_run": {"survived_shield": 4, "survived_no_shield": 0, "deaths_no_shield": 26, "latency_ms": 17.1, "planner_agreement": 0.668}, "ours": {"survived_shield": 3, "survived_no_shield": 0, "deaths_no_shield": 50, "latency_ms": 17.1, "planner_agreement": 0.10}},
+ "post_training_replay": {"plain_replay_lr_3e-4_tricky": 0.598, "hard_negative_replay_lr_3e-4_tricky": 0.6899}}
