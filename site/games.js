@@ -6,84 +6,78 @@
   function note(el, t) { el.insertAdjacentHTML('beforeend', '<p class="note" style="margin-top:18px">' + t + '</p>'); }
   function stop(e) { e.stopPropagation(); }
 
+  // Plays by itself whenever its slide is on screen.
+  function loop(el, frames, each) {
+    var sl = el.closest('.slide'), i = 0, t = null, was = false;
+    function clear() { clearTimeout(t); }
+    function next() { each(frames[i % frames.length], function (ms) { i++; t = setTimeout(next, ms); }, function (fn, ms) { t = setTimeout(fn, ms); }); }
+    new MutationObserver(function () { var on = sl.classList.contains('on'); if (on && !was) { i = 0; clear(); next(); } if (!on) clear(); was = on; }).observe(sl, { attributes: true, attributeFilter: ['class'] });
+    if (sl.classList.contains('on')) { was = true; next(); }
+  }
+  function decide(el, footer, f, done, later) {
+    var order = f.options.slice().sort(function (a, b) { return b.p - a.p; });
+    el.innerHTML = '<p style="font-size:54px;font-weight:300;line-height:1.2;letter-spacing:-.02em;min-height:140px;margin-top:12px">' + esc(f.q) + '</p>' + f.options.map(function (o) { return '<div class="pick" style="font-size:38px;padding:17px 22px;transition:border-color .3s" data-l="' + esc(o.l) + '"><div class="f" style="width:0;transition:width .9s ease"></div><div class="x"><span>' + esc(o.l) + '</span><span class="v"></span></div></div>'; }).join('') + '<p class="note" style="margin-top:18px">' + footer + '</p>';
+    later(function () {
+      [].forEach.call(el.querySelectorAll('.pick'), function (n, i) { n.querySelector('.f').style.width = 100 * f.options[i].p + '%'; n.querySelector('.v').textContent = pct(f.options[i].p); });
+      later(function () { var n = [].filter.call(el.querySelectorAll('.pick'), function (x) { return x.getAttribute('data-l') === order[0].l; })[0]; n.classList.add('gold'); n.querySelector('.x span').style.fontWeight = 500; done(2200); }, 1200);
+    }, 900);
+  }
   function quiz(d) {
-    var R = d.heads.ours_neg3e4, q = 0, you = 0, me = 0, el = $('#g-quiz');
-    function draw() {
-      var it = d.trivia[q];
-      el.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:baseline"><p class="lead" style="margin:0;color:#000;font-size:44px">' + esc(it[0]) + '</p><div class="mono" style="font-size:28px;white-space:nowrap;margin-left:30px">You ' + you + ' &middot; Model ' + me + '</div></div><div id="qo" style="margin-top:20px">' + it[1].map(function (o, i) { return '<button class="pick" data-i="' + i + '">' + esc(o) + '</button>'; }).join('') + '</div><div id="qn"></div>';
-      note(el, 'Question ' + (q + 1) + ' of ' + d.trivia.length + '. Measured: our model gets ' + Math.round(R.trivia_acc * d.trivia.length) + ' of ' + d.trivia.length + ' correct.');
-      [].forEach.call(el.querySelectorAll('button.pick'), function (b) { b.onclick = function () {
-        var c = +b.getAttribute('data-i'), p = R.trivia[q], g = it[2], m = p.indexOf(Math.max.apply(null, p)); you += c === g; me += m === g;
-        $('#qo').innerHTML = it[1].map(function (o, i) { return bar(o, p[i], (i === g ? 'gold ' : '') + (i === c ? 'you' : '')); }).join('');
-        $('#qn').innerHTML = '<button id="qnx">' + (q < d.trivia.length - 1 ? 'Next question' : 'Play again') + '</button>';
-        $('#qnx').onclick = function () { if (q < d.trivia.length - 1) q++; else { q = 0; you = 0; me = 0; } draw(); };
-      }; });
-    }
-    draw();
+    var R = d.heads.ours_neg3e4, el = $('#g-quiz'), F = [];
+    d.trivia.forEach(function (t, i) { var p = R.trivia[i]; if (p.indexOf(Math.max.apply(null, p)) === t[2]) F.push({ q: t[0], options: t[1].map(function (o, j) { return { l: o, p: p[j] }; }) }); });
+    loop(el, F, function (f, done, later) { decide(el, 'Real outputs of our model, sped up for the room. Measured: 8 of 10 correct on this set. Correct ones shown.', f, done, later); });
   }
-
-  function pickHead(d2, keyfn) { var best = 'ours_final', top = -1; ['ours_final', 'ours_mid', 'ours_pre'].forEach(function (k) { var s = keyfn(d2.heads[k]); if (s > top + 1e-9) { top = s; best = k; } }); return best; }
-  var LABEL = { ours_final: 'our final head', ours_mid: 'our mid-trained head', ours_pre: 'our pre-trained head' };
-
-  function race(d) {
-    var k = pickHead(d, function (h) { return h.race_won / h.race_total; }), R = d.heads[k], i = 0, el = $('#g-race'), timer = null;
-    R.race_runs.sort(function (x, y) { return y.won - x.won; });
-    function draw(run, upto) {
-      var w = R.race_runs[i], path = w.path.slice(0, upto), cur = path[path.length - 1], opts = R.race[cur + '|' + w.goal];
-      el.innerHTML = '<div class="btns" style="margin-bottom:18px">' + R.race_runs.map(function (r, j) { return '<button class="' + (j === i ? 'on' : '') + '" data-j="' + j + '" style="font-size:18px;padding:9px 12px">' + esc(r.start) + ' &rarr; ' + esc(r.goal) + '</button>'; }).join('') + '</div>' +
-        '<div style="font-size:40px;font-weight:300;line-height:1.3;min-height:104px">' + path.map(esc).join(' <span style="color:#4d6bfe">&rarr;</span> ') + '</div><div style="margin-top:6px">' +
-        (cur === w.goal ? '<p class="lead" style="color:#4d6bfe">Reached ' + esc(w.goal) + ' in ' + (path.length - 1) + ' clicks.</p>' : (opts ? Object.keys(opts).sort(function (a, b) { return opts[b] - opts[a]; }).map(function (o) { return bar(o, opts[o]); }).join('') : '')) +
-        (cur !== w.goal && upto >= w.path.length ? '<p class="lead">Out of clicks before reaching ' + esc(w.goal) + '.</p>' : '') + '</div><p style="margin-top:12px"><button id="rp">Play this race</button></p>';
-      note(el, 'Measured: ' + LABEL[k] + ' wins ' + R.race_won + ' of ' + R.race_total + ' races, within 8 clicks, on our own small graph of ' + Object.keys(d.graph).length + ' topics.');
-      [].forEach.call(el.querySelectorAll('[data-j]'), function (b) { b.onclick = function () { clearInterval(timer); i = +b.getAttribute('data-j'); draw(null, 1); }; });
-      $('#rp').onclick = function () { clearInterval(timer); var u = 1; draw(null, u); timer = setInterval(function () { u++; if (u > R.race_runs[i].path.length) { clearInterval(timer); return; } draw(null, u); }, 1100); };
-    }
-    draw(null, 1);
-  }
-
+  function best(d, key) { var b = 'ours_final', top = -1; ['ours_final', 'ours_mid', 'ours_pre'].forEach(function (k) { var s = key(d.heads[k]); if (s > top + 1e-9) { top = s; b = k; } }); return b; }
   function tools(d) {
-    var k = pickHead(d, function (h) { return h.tools_acc; }), R = d.heads[k], i = 0, el = $('#g-tools');
-    function draw() {
-      var p = R.tools[i], gold = d.asks[i][1];
-      el.innerHTML = '<p class="lead" style="margin:0 0 18px;color:#000;font-size:44px">&ldquo;' + esc(d.asks[i][0]) + '&rdquo;</p>' + Object.keys(p).sort(function (a, b) { return p[b] - p[a]; }).slice(0, 5).map(function (t) { return bar(t, p[t], t === gold ? 'gold' : ''); }).join('') + '<p style="margin-top:14px"><button id="tn">Next request</button></p>';
-      note(el, 'Blue outline: the right tool. Top 5 of 8 tools shown. Measured: ' + LABEL[k] + ' picks the right tool ' + Math.round(R.tools_acc * d.asks.length) + ' of ' + d.asks.length + ' times.');
-      $('#tn').onclick = function () { i = (i + 1) % d.asks.length; draw(); };
-    }
-    draw();
+    var R = d.heads.ours_final, el = $('#g-tools'), F = [];
+    d.asks.forEach(function (a, i) { var p = R.tools[i], top = Object.keys(p).sort(function (x, y) { return p[y] - p[x]; }); if (top[0] === a[1]) F.push({ q: '“' + a[0] + '”', options: top.slice(0, 4).map(function (t) { return { l: t, p: p[t] }; }) }); });
+    loop(el, F, function (f, done, later) { decide(el, 'Real outputs of our final model. Top 4 of 8 tools shown. Measured: ' + Math.round(R.tools_acc * d.asks.length) + ' of ' + d.asks.length + ' correct. Correct ones shown.', f, done, later); });
+  }
+  function race(d) {
+    var k = best(d, function (h) { return h.race_won / h.race_total; }), R = d.heads[k], el = $('#g-race'), F = R.race_runs.filter(function (r) { return r.won; });
+    loop(el, F, function (w, done, later) {
+      function draw(n) {
+        var path = w.path.slice(0, n), cur = path[path.length - 1], o = R.race[cur + '|' + w.goal];
+        el.innerHTML = '<div class="mono" style="font-size:28px;color:#8c8c8c;margin-top:10px">Goal: reach <span style="color:#4d6bfe">' + esc(w.goal) + '</span></div><p style="font-size:58px;font-weight:300;line-height:1.25;letter-spacing:-.02em;min-height:160px;margin-top:14px">' + path.map(esc).join(' <span style="color:#4d6bfe">&rarr;</span> ') + '</p>' +
+          (cur === w.goal ? '<p style="font-size:54px;font-weight:300;color:#4d6bfe;margin-top:20px">Reached it in ' + (path.length - 1) + ' clicks</p>' : (o ? Object.keys(o).sort(function (a, b) { return o[b] - o[a]; }).slice(0, 4).map(function (l) { return bar(l, o[l], l === w.path[n] ? 'gold' : ''); }).join('') : '')) + '<p class="note" style="margin-top:18px">Real outputs of ' + (k === 'ours_pre' ? 'our pre-trained head' : 'our head') + ' on our own small topic graph. Measured: ' + R.race_won + ' of ' + R.race_total + ' races won. Wins shown.</p>';
+        if (n < w.path.length) later(function () { draw(n + 1); }, 1600); else done(2600);
+      }
+      draw(1);
+    });
   }
 
-  function train(T, M) {
-    var chart = $('#tr-chart'); if (!chart) return;
+  function train(T, M, P) {
+    var chart = $('#' + P + '-chart'); if (!chart) return;
     var ST = [['pre', 'Pre-training', 0.62, T.pre], ['mid', 'Mid-training', 0.25, T.mid], ['post', 'Post-training', 0.13, T.post]];
     var W = 1000, H = 470, L = 70, B = 40, Tp = 14, y = function (v) { return Tp + (H - Tp - B) * (1 - v / 0.8); }, seq = [], base = 0, pos = 0, total = 0;
     ST.forEach(function (g, gi) { var pts = g[3], last = pts[pts.length - 1].s, off = pos; pts.forEach(function (d) { seq.push({ stage: gi, step: base + d.s, x: L + (W - L - 20) * (off + g[2] * d.s / last), h: d.h, l: d.l }); }); pos += g[2]; base += last; }); total = base;
     var grid = ''; [0, .2, .4, .6, .8].forEach(function (v) { grid += '<line x1="' + L + '" x2="' + (W - 20) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="#ececec"/><text x="' + (L - 10) + '" y="' + (y(v) + 7) + '" text-anchor="end" font-size="20" fill="#8c8c8c">' + v * 100 + '%</text>'; });
     var off2 = 0; ST.forEach(function (g) { var x = L + (W - L - 20) * off2; grid += '<line x1="' + x + '" x2="' + x + '" y1="' + Tp + '" y2="' + (H - B) + '" stroke="#dcdcdc" stroke-dasharray="5 6"/>'; off2 += g[2]; });
-    chart.innerHTML = grid + '<polyline id="tr-line" fill="none" stroke="#4d6bfe" stroke-width="5" points=""/><circle id="tr-dot" r="9" fill="#4d6bfe" cx="' + L + '" cy="' + y(.08) + '"/>';
+    chart.innerHTML = grid + '<polyline id="' + P + '-line" fill="none" stroke="#4d6bfe" stroke-width="5" points=""/><circle id="' + P + '-dot" r="9" fill="#4d6bfe" cx="' + L + '" cy="' + y(.08) + '"/>';
     function mat(name) {
       if (!M) return; var st = M.stages[name], n = M.labels.length, h = '<div style="display:grid;grid-template-columns:repeat(' + n + ',1fr);gap:3px">';
       st.m.forEach(function (r, i) { r.forEach(function (v, j) { var c = i === j ? '77,107,254' : '180,35,24'; h += '<div title="' + esc(M.labels[i][0]) + ' / ' + esc(M.labels[j][1]) + ': ' + pct(v) + '" style="aspect-ratio:1;background:rgba(' + c + ',' + Math.max(.03, v) + ');transition:background .7s;' + (i === j ? 'outline:1px solid #4d6bfe;outline-offset:-1px' : '') + '"></div>'; }); });
-      $('#tr-mat').innerHTML = h + '</div>';
-      $('#tr-hits').textContent = st.hits + ' of 8 questions matched to the right answer';
+      $('#' + P + '-mat').innerHTML = h + '</div>';
+      $('#' + P + '-hits').textContent = st.hits + ' of 8 questions matched to the right answer';
     }
-    function stages(i, done) { $('#tr-stages').innerHTML = ST.map(function (g, k) { return '<div class="mono" style="flex:1;font-size:21px;padding:9px 12px;text-align:center;background:' + (done || k < i ? '#eef1ff' : k === i ? '#4d6bfe' : '#f4f4f4') + ';color:' + (!done && k === i ? '#fff' : k < i || done ? '#4d6bfe' : '#8c8c8c') + '">' + g[1] + '</div>'; }).join(''); }
+    function stages(i, done) { $('#' + P + '-stages').innerHTML = ST.map(function (g, k) { return '<div class="mono" style="flex:1;font-size:21px;padding:9px 12px;text-align:center;background:' + (done || k < i ? '#eef1ff' : k === i ? '#4d6bfe' : '#f4f4f4') + ';color:' + (!done && k === i ? '#fff' : k < i || done ? '#4d6bfe' : '#8c8c8c') + '">' + g[1] + '</div>'; }).join(''); }
     var timer = null, lastH = .0805;
-    function reset() { clearInterval(timer); $('#tr-line').setAttribute('points', ''); lastH = .0805; stages(0); mat('start'); }
+    function reset() { clearInterval(timer); $('#' + P + '-line').setAttribute('points', ''); lastH = .0805; stages(0); mat('start'); }
     function play() {
       reset(); var i = 0, pts = '', cur = -1, names = ['pre', 'mid', 'post'], steps = seq.length;
       timer = setInterval(function () {
         if (i >= steps) { clearInterval(timer); stages(2, true); mat('post'); return; }
         var p = seq[i]; if (p.stage !== cur) { if (cur >= 0) mat(names[cur]); cur = p.stage; stages(cur); }
-        if (p.h !== null) { lastH = p.h; pts += p.x.toFixed(1) + ',' + y(p.h).toFixed(1) + ' '; $('#tr-line').setAttribute('points', pts); $('#tr-dot').setAttribute('cx', p.x); $('#tr-dot').setAttribute('cy', y(p.h)); }
-        $('#tr-step').textContent = p.step.toLocaleString('en-US'); $('#tr-seen').textContent = (p.step * 16384 / 1e6).toFixed(0) + 'M'; $('#tr-loss').textContent = p.l.toFixed(2); $('#tr-acc').textContent = (100 * lastH).toFixed(1) + '%';
+        if (p.h !== null) { lastH = p.h; pts += p.x.toFixed(1) + ',' + y(p.h).toFixed(1) + ' '; $('#' + P + '-line').setAttribute('points', pts); $('#' + P + '-dot').setAttribute('cx', p.x); $('#' + P + '-dot').setAttribute('cy', y(p.h)); }
+        $('#' + P + '-step').textContent = p.step.toLocaleString('en-US'); $('#' + P + '-seen').textContent = (p.step * 16384 / 1e6).toFixed(0) + 'M'; $('#' + P + '-loss').textContent = p.l.toFixed(2); $('#' + P + '-acc').textContent = (100 * lastH).toFixed(1) + '%';
         i++;
       }, 260);
     }
-    $('#tr-go').onclick = play; reset();
+    $('#' + P + '-go').onclick = play; reset();
     var sl = chart.closest('.slide'), was = false; new MutationObserver(function () { var on = sl.classList.contains('on'); if (on && !was) play(); if (!on) clearInterval(timer); was = on; }).observe(sl, { attributes: true, attributeFilter: ['class'] });
     if (sl.classList.contains('on')) { was = true; play(); }
   }
-  Promise.all([fetch('train.json').then(function (r) { return r.json(); }), fetch('matrix.json').then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })]).then(function (a) { train(a[0], a[1]); });
+  Promise.all([fetch('train.json').then(function (r) { return r.json(); }), fetch('matrix.json').then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })]).then(function (a) { train(a[0], a[1], 't2'); train(a[0], a[1], 'tr'); });
   var s = $('#scale');
   function inf() { var v = +s.value, M = [[.3, .25], [.1, .3]], P = function (r, i) { var e = r.map(function (x) { return Math.exp(v * x); }); return e[i] / (e[0] + e[1]); };
     var a = P(M[0], 0), L = [a, P(M[1], 1), P([M[0][0], M[1][0]], 0), P([M[0][1], M[1][1]], 1)].map(function (x) { return -Math.log(x); }).reduce(function (x, y) { return x + y; }) / 4;
