@@ -52,6 +52,38 @@
     draw();
   }
 
+  function train(T, M) {
+    var chart = $('#tr-chart'); if (!chart) return;
+    var ST = [['pre', 'Pre-training', 0.62, T.pre], ['mid', 'Mid-training', 0.25, T.mid], ['post', 'Post-training', 0.13, T.post]];
+    var W = 1000, H = 470, L = 70, B = 40, Tp = 14, y = function (v) { return Tp + (H - Tp - B) * (1 - v / 0.8); }, seq = [], base = 0, pos = 0, total = 0;
+    ST.forEach(function (g, gi) { var pts = g[3], last = pts[pts.length - 1].s, off = pos; pts.forEach(function (d) { seq.push({ stage: gi, step: base + d.s, x: L + (W - L - 20) * (off + g[2] * d.s / last), h: d.h, l: d.l }); }); pos += g[2]; base += last; }); total = base;
+    var grid = ''; [0, .2, .4, .6, .8].forEach(function (v) { grid += '<line x1="' + L + '" x2="' + (W - 20) + '" y1="' + y(v) + '" y2="' + y(v) + '" stroke="#ececec"/><text x="' + (L - 10) + '" y="' + (y(v) + 7) + '" text-anchor="end" font-size="20" fill="#8c8c8c">' + v * 100 + '%</text>'; });
+    var off2 = 0; ST.forEach(function (g) { var x = L + (W - L - 20) * off2; grid += '<line x1="' + x + '" x2="' + x + '" y1="' + Tp + '" y2="' + (H - B) + '" stroke="#dcdcdc" stroke-dasharray="5 6"/><text x="' + (x + 8) + '" y="' + (H - 12) + '" font-size="20" fill="#8c8c8c">' + g[1] + '</text>'; off2 += g[2]; });
+    chart.innerHTML = grid + '<polyline id="tr-line" fill="none" stroke="#4d6bfe" stroke-width="5" points=""/><circle id="tr-dot" r="9" fill="#4d6bfe" cx="' + L + '" cy="' + y(.08) + '"/>';
+    function mat(name) {
+      if (!M) return; var st = M.stages[name], n = M.labels.length, h = '<div style="display:grid;grid-template-columns:repeat(' + n + ',1fr);gap:3px">';
+      st.m.forEach(function (r, i) { r.forEach(function (v, j) { var c = i === j ? '77,107,254' : '180,35,24'; h += '<div title="' + esc(M.labels[i][0]) + ' / ' + esc(M.labels[j][1]) + ': ' + pct(v) + '" style="aspect-ratio:1;background:rgba(' + c + ',' + Math.max(.03, v) + ');transition:background .7s;' + (i === j ? 'outline:1px solid #4d6bfe;outline-offset:-1px' : '') + '"></div>'; }); });
+      $('#tr-mat').innerHTML = h + '</div>';
+      $('#tr-hits').textContent = st.hits + ' of 8 questions matched to the right answer';
+    }
+    function stages(i, done) { $('#tr-stages').innerHTML = ST.map(function (g, k) { return '<div class="mono" style="flex:1;font-size:21px;padding:9px 12px;text-align:center;background:' + (done || k < i ? '#eef1ff' : k === i ? '#4d6bfe' : '#f4f4f4') + ';color:' + (!done && k === i ? '#fff' : k < i || done ? '#4d6bfe' : '#8c8c8c') + '">' + g[1] + '</div>'; }).join(''); }
+    var timer = null, lastH = .0805;
+    function reset() { clearInterval(timer); $('#tr-line').setAttribute('points', ''); lastH = .0805; stages(0); mat('start'); }
+    function play() {
+      reset(); var i = 0, pts = '', cur = -1, names = ['pre', 'mid', 'post'], steps = seq.length;
+      timer = setInterval(function () {
+        if (i >= steps) { clearInterval(timer); stages(2, true); mat('post'); return; }
+        var p = seq[i]; if (p.stage !== cur) { if (cur >= 0) mat(names[cur]); cur = p.stage; stages(cur); }
+        if (p.h !== null) { lastH = p.h; pts += p.x.toFixed(1) + ',' + y(p.h).toFixed(1) + ' '; $('#tr-line').setAttribute('points', pts); $('#tr-dot').setAttribute('cx', p.x); $('#tr-dot').setAttribute('cy', y(p.h)); }
+        $('#tr-step').textContent = p.step.toLocaleString('en-US'); $('#tr-seen').textContent = (p.step * 16384 / 1e6).toFixed(0) + 'M'; $('#tr-loss').textContent = p.l.toFixed(2); $('#tr-acc').textContent = (100 * lastH).toFixed(1) + '%';
+        i++;
+      }, 260);
+    }
+    $('#tr-go').onclick = play; reset();
+    var sl = chart.closest('.slide'), was = false; new MutationObserver(function () { var on = sl.classList.contains('on'); if (on && !was) play(); if (!on) clearInterval(timer); was = on; }).observe(sl, { attributes: true, attributeFilter: ['class'] });
+    if (sl.classList.contains('on')) { was = true; play(); }
+  }
+  Promise.all([fetch('train.json').then(function (r) { return r.json(); }), fetch('matrix.json').then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })]).then(function (a) { train(a[0], a[1]); });
   var s = $('#scale');
   function inf() { var v = +s.value, M = [[.3, .25], [.1, .3]], P = function (r, i) { var e = r.map(function (x) { return Math.exp(v * x); }); return e[i] / (e[0] + e[1]); };
     var a = P(M[0], 0), L = [a, P(M[1], 1), P([M[0][0], M[1][0]], 0), P([M[0][1], M[1][1]], 1)].map(function (x) { return -Math.log(x); }).reduce(function (x, y) { return x + y; }) / 4;
